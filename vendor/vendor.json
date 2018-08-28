@@ -517,10 +517,10 @@
 			"revisionTime": "2018-07-11T05:22:29Z"
 		},
 		{
-			"checksumSHA1": "1tAb3rvB34c3zsX+DRY5xDJqNUA=",
+			"checksumSHA1": "ae+jhUirSvN0IXPVU7X7xc+EbFE=",
 			"path": "github.com/aws/aws-sdk-go/service/iam",
-			"revision": "c01ebd0d48a4772fd28a0b684db0f36882dc995c",
-			"revisionTime": "2018-07-11T05:22:29Z"
+			"revision": "46ffe7480c9d567070fab0ed39912241bbc77449",
+			"revisionTime": "2018-08-28T19:42:26Z"
 		},
 		{
 			"checksumSHA1": "1qeG+wA9KLSzxwsAYd+e0LZTtPY=",
