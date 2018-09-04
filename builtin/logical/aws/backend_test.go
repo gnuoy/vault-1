@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"reflect"
 	"testing"
@@ -141,6 +142,15 @@ func TestBackend_throttled(t *testing.T) {
 	expected := "Error creating IAM user: Throttling: "
 	if rErr.Error() != expected {
 		t.Fatalf("error message did not match, expected (%s), got (%s)", expected, rErr.Error())
+	}
+
+	// verify the error we got back is returned with a http.StatusBadGateway
+	code, err := logical.RespondErrorCommon(credReq, credResp, err)
+	if err == nil {
+		t.Fatal("expected error after running req/resp/err through RespondErrorCommon, got nil")
+	}
+	if code != http.StatusBadGateway {
+		t.Fatalf("expected HTTP status 'bad gateway', got: (%d)", code)
 	}
 }
 
