@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -57,6 +59,9 @@ type backend struct {
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
+
+	iamClient iamiface.IAMAPI
+	stsClient stsiface.STSAPI
 }
 
 const backendHelp = `

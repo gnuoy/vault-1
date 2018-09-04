@@ -38,7 +38,7 @@ func secretAccessKeys(b *backend) *framework.Secret {
 		},
 
 		Renew:  b.secretAccessKeysRenew,
-		Revoke: secretAccessKeysRevoke,
+		Revoke: b.secretAccessKeysRevoke,
 	}
 }
 
@@ -68,14 +68,17 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(ctx, s)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if b.stsClient == nil {
+		stsClient, err := clientSTS(ctx, s)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		b.stsClient = stsClient
 	}
 
 	username, usernameWarning := genUsername(displayName, policyName, "sts")
 
-	tokenResp, err := STSClient.GetFederationToken(
+	tokenResp, err := b.stsClient.GetFederationToken(
 		&sts.GetFederationTokenInput{
 			Name:            aws.String(username),
 			Policy:          aws.String(policy),
@@ -113,9 +116,12 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
-	STSClient, err := clientSTS(ctx, s)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if b.stsClient == nil {
+		stsClient, err := clientSTS(ctx, s)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		b.stsClient = stsClient
 	}
 
 	username, usernameWarning := genUsername(displayName, roleName, "iam_user")
@@ -128,7 +134,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if policy != "" {
 		assumeRoleInput.SetPolicy(policy)
 	}
-	tokenResp, err := STSClient.AssumeRole(assumeRoleInput)
+	tokenResp, err := b.stsClient.AssumeRole(assumeRoleInput)
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
@@ -162,9 +168,12 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
-	client, err := clientIAM(ctx, s)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	if b.iamClient == nil {
+		iamClient, err := clientIAM(ctx, s)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		b.iamClient = iamClient
 	}
 
 	username, usernameWarning := genUsername(displayName, policyName, "iam_user")
@@ -181,7 +190,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = client.CreateUser(&iam.CreateUserInput{
+	_, err = b.iamClient.CreateUser(&iam.CreateUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
@@ -199,7 +208,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = client.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = b.iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -211,7 +220,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = client.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = b.iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -223,7 +232,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the keys
-	keyResp, err := client.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := b.iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
@@ -290,7 +299,7 @@ func (b *backend) secretAccessKeysRenew(ctx context.Context, req *logical.Reques
 	return resp, nil
 }
 
-func secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) secretAccessKeysRevoke(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	// STS cleans up after itself so we can skip this if is_sts internal data
 	// element set to true. If is_sts is not set, assumes old version
