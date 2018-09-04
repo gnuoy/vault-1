@@ -101,29 +101,14 @@ func TestBackend_policyCrud(t *testing.T) {
 func TestBackend_throttled(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b := Backend()
 
+	b := Backend()
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 
-	policyDoc := `
-{
-  "Version": "2012-10-17",
-  "Statement": [
-      {
-          "Effect": "Allow",
-          "Action": "ec2:Describe*",
-          "Resource": "*"
-      }
-  ]
-}
-`
-
 	connData := map[string]interface{}{
 		"credential_type": "iam_user",
-		"policy_document": policyDoc,
-		"name":            "something",
 	}
 
 	confReq := &logical.Request{
