@@ -68,6 +68,9 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
+
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
 	if b.stsClient == nil {
 		stsClient, err := clientSTS(ctx, s)
 		if err != nil {
@@ -168,6 +171,9 @@ func (b *backend) secretAccessKeysCreate(
 	ctx context.Context,
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
+
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
 	if b.iamClient == nil {
 		iamClient, err := clientIAM(ctx, s)
 		if err != nil {
