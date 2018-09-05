@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	awsRequest "github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -90,7 +90,7 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error generating STS keys: %s", err)), nil
+			"Error generating STS keys: %s", err)), awsutil.CheckAWSError(err)
 	}
 
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
@@ -141,7 +141,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error assuming role: %s", err)), nil
+			"Error assuming role: %s", err)), awsutil.CheckAWSError(err)
 	}
 
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
@@ -200,16 +200,8 @@ func (b *backend) secretAccessKeysCreate(
 		UserName: aws.String(username),
 	})
 	if err != nil {
-		var throttleErr error
-		// IsErrorThrottle will check if the error returned is one that matches
-		// known request limiting errors:
-		// https://github.com/aws/aws-sdk-go/blob/488d634b5a699b9118ac2befb5135922b4a77210/aws/request/retryer.go#L35
-		if awsRequest.IsErrorThrottle(err) {
-			throttleErr = logical.ErrUpstreamRateLimited
-		}
-
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating IAM user: %s", err)), throttleErr
+			"Error creating IAM user: %s", err)), awsutil.CheckAWSError(err)
 	}
 
 	for _, arn := range role.PolicyArns {
@@ -220,7 +212,7 @@ func (b *backend) secretAccessKeysCreate(
 		})
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Error attaching user policy: %s", err)), nil
+				"Error attaching user policy: %s", err)), awsutil.CheckAWSError(err)
 		}
 
 	}
@@ -233,7 +225,7 @@ func (b *backend) secretAccessKeysCreate(
 		})
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Error putting user policy: %s", err)), nil
+				"Error putting user policy: %s", err)), awsutil.CheckAWSError(err)
 		}
 	}
 
@@ -243,7 +235,7 @@ func (b *backend) secretAccessKeysCreate(
 	})
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error creating access keys: %s", err)), nil
+			"Error creating access keys: %s", err)), awsutil.CheckAWSError(err)
 	}
 
 	// Remove the WAL entry, we succeeded! If we fail, we don't return
