@@ -2,6 +2,7 @@ package awsutil
 
 import (
 	awsRequest "github.com/aws/aws-sdk-go/aws/request"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -15,4 +16,16 @@ func CheckAWSError(err error) error {
 		return logical.ErrUpstreamRateLimited
 	}
 	return nil
+}
+
+// AppendLogicalError checks if the given error is a known AWS error we modify,
+// and if so then returns a go-multierror, appending the original and the
+// logical error.
+// If the error is not an AWS error, or not an error we wish to modify, then
+// return the original error.
+func AppendLogicalError(err error) error {
+	if awserr := CheckAWSError(err); awserr != nil {
+		err = multierror.Append(err, awserr)
+	}
+	return err
 }
