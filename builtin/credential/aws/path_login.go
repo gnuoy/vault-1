@@ -23,6 +23,7 @@ import (
 	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -170,7 +171,7 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 	})
 	if err != nil {
 		errW := errwrap.Wrapf(fmt.Sprintf("error fetching description for instance ID %q: {{err}}", instanceID), err)
-		return nil, awsutil.AppendLogicalError(errW)
+		return nil, multierror.Append(errW, awsutil.CheckAWSError(err))
 	}
 	if status == nil {
 		return nil, fmt.Errorf("nil output from describe instances")
