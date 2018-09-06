@@ -69,9 +69,15 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 	displayName, policyName, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
 
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
+	b.clientMutex.RLock()
+	unlockFunc := b.clientMutex.RUnlock
+	defer func() { unlockFunc() }()
 	if b.stsClient == nil {
+		// Upgrade the lock for writing
+		b.clientMutex.RUnlock()
+		b.clientMutex.Lock()
+		unlockFunc = b.clientMutex.Unlock
+
 		stsClient, err := clientSTS(ctx, s)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -174,9 +180,15 @@ func (b *backend) secretAccessKeysCreate(
 	s logical.Storage,
 	displayName, policyName string, role *awsRoleEntry) (*logical.Response, error) {
 
-	b.clientMutex.Lock()
-	defer b.clientMutex.Unlock()
+	b.clientMutex.RLock()
+	unlockFunc := b.clientMutex.RUnlock
+	defer func() { unlockFunc() }()
 	if b.iamClient == nil {
+		// Upgrade the lock for writing
+		b.clientMutex.RUnlock()
+		b.clientMutex.Lock()
+		unlockFunc = b.clientMutex.Unlock
+
 		iamClient, err := clientIAM(ctx, s)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
