@@ -119,6 +119,8 @@ func (b *backend) secretTokenCreate(ctx context.Context, s logical.Storage,
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string,
 	lifeTimeInSeconds int64) (*logical.Response, error) {
+	b.clientMutex.Lock()
+	defer b.clientMutex.Unlock()
 	if b.stsClient == nil {
 		stsClient, err := clientSTS(ctx, s)
 		if err != nil {

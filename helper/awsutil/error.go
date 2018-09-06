@@ -7,7 +7,7 @@ import (
 )
 
 // CheckAWSError will examine an error and convert to a logical error if
-// approrpiate. If no appropriate error is found, return nil
+// appropriate. If no appropriate error is found, return nil
 func CheckAWSError(err error) error {
 	// IsErrorThrottle will check if the error returned is one that matches
 	// known request limiting errors:
